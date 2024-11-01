@@ -1,6 +1,6 @@
 import os
-
 from keygen import KG
+from sign import Signer
 
 def lectura_params():
     op = 0
@@ -80,4 +80,6 @@ if __name__ == "__main__":
 
     with open(privada, 'wb') as file:
         file.write(private_key)
+
+    gen_firmas = Signer(params, private_seed)
     
