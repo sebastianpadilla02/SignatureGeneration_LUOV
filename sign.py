@@ -16,9 +16,13 @@ class Signer:
         # Reutilizamos la clase KG para derivar la semilla pública y T
         self.keygen = KG(params, private_seed)
 
+        self.s = None
+        self.salt = None
+
         self.Sign(private_seed, M)
 
     def Sign(self, private_seed: bytes, M: bytes) -> None:
+        mod_value = 2 ** self.r  # Definir el módulo para F_{2^r}
         public_seed, T = self.derive_public_seed_and_T(private_seed)
         # print(f'public seed: {public_seed}')
         # print(f'T: {T}')
@@ -62,8 +66,44 @@ class Signer:
             # print(f'v: {v}')
             A = self.BuildAugmentedMatrix(C, L, Q1, T, h, v)
 
-            
+            # Resolver el sistema lineal A[:, :-1] * x = A[:, -1] usando eliminación gaussiana
 
+            # Extraer la submatriz de coeficientes y el vector de soluciones
+            coef_matrix = A[:, :-1] % mod_value
+            solution_vector = A[:, -1] % mod_value
+
+            try:
+                # Resolver el sistema para `o`
+                o = self.gauss_jordan_modular(coef_matrix, solution_vector, mod_value)
+                # o = np.linalg.solve(coef_matrix, solution_vector) % mod_value
+
+                # Verificar si `o` es una solución válida
+                is_solution = np.all((coef_matrix @ o % mod_value) == (solution_vector % mod_value))
+
+                if is_solution:
+                    # Si se encontró una solución única, construir `s'`
+                    s_prime = np.concatenate((v, o)).reshape(-1, 1)
+                    solution_found = True
+                else:
+                    # Si `o` no es una solución válida, intentar con otro `v`
+                    continue
+            except ValueError as e:
+                # Si no se encontró una solución, intentar con otro `v`
+                continue
+
+
+        print(f'coefs: {coef_matrix}')
+        print(f'solution: {solution_vector}')
+
+        # print(f'o: {o}')
+        # print(f's_prime: {s_prime}')
+
+
+        # Construir el vector de firma `s` como se especifica en el algoritmo
+        s = self.build_signature(T, v, o, mod_value, s_prime)
+
+        self.salt = salt
+        self.s = s
 
 
     def derive_public_seed_and_T(self, private_seed) -> Tuple[bytes, np.ndarray]:
@@ -172,7 +212,7 @@ class Signer:
         # Calcular RHS = h - C - L(v||0)^T
         RHS = h - C - Lv
 
-        print(f'RHS: {RHS.shape}')
+        # print(f'RHS: {RHS.shape}')
 
         # Aplicar operación módulo 2^r para mantener los valores en F_{2^r}
         RHS = RHS % mod_value 
@@ -195,3 +235,78 @@ class Signer:
 
         # print(f'LHS: {LHS} tamaño: {LHS.shape}')
         return LHS
+    
+    def gauss_jordan_modular(self, A, b, mod_value):
+        """
+        Resolver el sistema de ecuaciones Ax = b usando eliminación Gaussiana en módulo `mod_value`.
+        
+        Parámetros:
+        A -- matriz de coeficientes (entera)
+        b -- vector de soluciones (entero)
+        mod_value -- valor del módulo (2^r en tu caso)
+        
+        Retorna:
+        x -- solución entera en el campo F_{mod_value} si el sistema tiene solución única.
+        """
+        # Concatenar A y b en una matriz aumentada
+        A = A % mod_value
+        b = b % mod_value
+        augmented_matrix = np.hstack((A, b.reshape(-1, 1)))  # Matriz aumentada (A|b)
+        
+        rows, cols = augmented_matrix.shape
+        
+        # Eliminación Gaussiana
+        for i in range(rows):
+            # Buscar el primer elemento no nulo en la columna i (pivote)
+            pivot = augmented_matrix[i, i]
+            
+            # Verificar si el pivot es cero o no tiene inverso modular
+            if pivot == 0 or np.gcd(int(pivot), mod_value) != 1:
+                # Buscar otra fila para intercambiar
+                found = False
+                for j in range(i + 1, rows):
+                    if augmented_matrix[j, i] != 0 and np.gcd(int(augmented_matrix[j, i]), mod_value) == 1:
+                        augmented_matrix[[i, j]] = augmented_matrix[[j, i]]
+                        pivot = augmented_matrix[i, i]
+                        found = True
+                        break
+                # Si no se encontró un pivote invertible, el sistema puede ser singular
+                if not found:
+                    raise ValueError("No se encontró un pivote invertible; el sistema puede ser singular.")
+            
+            # Asegurarse de que el pivote sea 1 multiplicándolo por su inverso modular
+            pivot_inv = pow(int(pivot), -1, mod_value)
+            augmented_matrix[i] = (augmented_matrix[i] * pivot_inv) % mod_value
+            
+            # Eliminar las entradas en otras filas
+            for j in range(rows):
+                if j != i:
+                    factor = augmented_matrix[j, i]
+                    augmented_matrix[j] = (augmented_matrix[j] - factor * augmented_matrix[i]) % mod_value
+        
+        # Extraer la solución
+        x = augmented_matrix[:, -1]
+        return x
+    
+    def build_signature(self, T, v, o, mod_value, s_prime) -> np.ndarray:
+        # Construir la matriz de bloques
+        # Matriz identidad de tamaño `v x v`
+        identity_v = np.eye(len(v), dtype=int)
+
+        # Matriz identidad de tamaño `m x m`
+        identity_m = np.eye(len(o), dtype=int)
+
+        # Concatenar las matrices para formar el bloque
+        # `1_v` y `-T`
+        top_block = np.hstack((identity_v, -T % mod_value))
+
+        # `0` y `1_m`
+        bottom_block = np.hstack((np.zeros((len(o), len(v)), dtype=int), identity_m))
+
+        # Crear la matriz completa
+        block_matrix = np.vstack((top_block, bottom_block))
+
+        # Multiplicar por `s_prime` y aplicar el módulo
+        s = (block_matrix @ s_prime) % mod_value
+
+        return s

@@ -85,4 +85,7 @@ if __name__ == "__main__":
     M = b'Hola mundo'
 
     gen_firmas = Signer(params, private_seed, M)
+
+    print(f'Firma: {gen_firmas.s}')
+    print(f'Salt: {gen_firmas.salt}')
     
