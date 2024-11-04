@@ -46,8 +46,8 @@ if __name__ == "__main__":
     #Se guardan en variables la llave publica y provada respectivamente
     public_key, private_key = llaves.public_key, private_seed
 
-    print(f'public key: {public_key}')
-    print(f'private key: {private_key}')
+    #print(f'public key: {public_key}')
+    #print(f'private key: {private_key}')
 
     #Se hace para definir el nombre del archivo binario donde se guardarán las llaves
     if(op == 1):
@@ -81,5 +81,8 @@ if __name__ == "__main__":
     with open(privada, 'wb') as file:
         file.write(private_key)
 
-    gen_firmas = Signer(params, private_seed)
+    #Se crea un mensaje a firmar
+    M = b'Hola mundo'
+
+    gen_firmas = Signer(params, private_seed, M)
     

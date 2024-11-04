@@ -1,34 +1,87 @@
 from keygen import KG
 import os
+import numpy as np
+from typing import Tuple
+import hashlib
 
 class Signer:
-    def __init__(self, params, private_seed):
+    def __init__(self, params: list, private_seed: bytes, M: bytes) -> None:
         self.params = params
-        self.private_seed = private_seed
+        # self.private_seed = private_seed
         self.r = params[0]
         self.m = params[1]
         self.v = params[2]
+        self.SHAKE = params[3]
         
         # Reutilizamos la clase KG para derivar la semilla pública y T
         self.keygen = KG(params, private_seed)
 
-    def derive_public_seed_and_T(self):
+        self.Sign(private_seed, M)
+
+    def Sign(self, private_seed: bytes, M: bytes) -> None:
+        public_seed, T = self.derive_public_seed_and_T(private_seed)
+        # print(f'public seed: {public_seed}')
+        # print(f'T: {T}')
+
+        C, L, Q1 = self.G(public_seed)
+
+        # print(f'C: {C}')
+        # print(f'L: {L}')
+        # print(f'Q1: {Q1}')
+
+        salt = os.urandom(16)
+
+        # print(f'salt: {salt} y su longitud: {len(salt)}')
+
+        h = self.calculate_h(M, salt)
+        # print(f'h: {h}')
+
+
+
+    def derive_public_seed_and_T(self, private_seed) -> Tuple[bytes, np.ndarray]:
         # Llama al método SqueezeT para derivar `public_seed` y `T` a partir de la private_seed
-        public_seed, T = self.keygen.SqueezeT(self.keygen.InitializeAndAbsorb(self.private_seed))
+        public_seed, T = self.keygen.SqueezeT(self.keygen.InitializeAndAbsorb(private_seed))
         
         # Devuelve la `public_seed` y la matriz `T`
         return public_seed, T
+    
+    def G(self, public_seed):
+        # Llama a SqueezePublicMap de la clase KG para obtener C, L, y Q1
+        C, L, Q1 = self.keygen.SqueezePublicMap(public_seed)
+        return C, L, Q1
+    
+    def calculate_h(self, M: bytes, salt: bytes) -> np.ndarray:
+        # Línea 4: Concatenar el mensaje, 0x00 y el salt
+        concatenated_message = M + b'\x00' + salt
 
-# Ejemplo de uso
-if __name__ == "__main__":
-    # Ejemplo de parámetros y generación de semilla privada
-    params = [7, 57, 197, 128]
-    private_seed = os.urandom(32)
+        # Llama a la función H de la clase KG para calcular h
+        #Inicializar el shake según el parámetro
+        if(self.SHAKE == 128):
+            shake = hashlib.shake_128()
+        else:
+            shake = hashlib.shake_256()
+        
+        # Absorber el mensaje concatenado en la esponja
+        shake.update(concatenated_message)
 
-    # Crear instancia de Signer
-    signer = Signer(params, private_seed)
+        # Generar `m * r` bits de salida
+        num_bits = self.m * self.r
+        # print(f'num_bits: {num_bits}')
+        num_bytes = (num_bits + 7) // 8  # Convertir a número de bytes redondeando hacia arriba
 
-    # Derivar `public_seed` y `T`
-    public_seed, T = signer.derive_public_seed_and_T()
-    print(f"Public Seed: {public_seed}")
-    print(f"T: {T}")
+        hash_output = shake.digest(num_bytes)
+
+        # Convertir el hash en un vector sobre F_{2^r} y almacenar en un array de numpy
+        bit_string = ''.join(f'{byte:08b}' for byte in hash_output)  # Convertir los bytes a una cadena de bits
+
+        # print(f'bit_string: {bit_string} y su longitud: {len(bit_string)}')
+
+        h = np.zeros(self.m, dtype=int)
+
+        for i in range(self.m):
+            # Tomar bloques de `r` bits y convertirlos en enteros
+            r_bits = bit_string[i * self.r: (i + 1) * self.r]
+            # print(f'r_bits: {r_bits} y su longitud: {len(r_bits)}')
+            h[i] = int(r_bits, 2)
+
+        return h
