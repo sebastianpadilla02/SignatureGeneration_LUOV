@@ -88,7 +88,8 @@ if __name__ == "__main__":
         file.write(private_key)
 
     #Se crea un mensaje a firmar
-    M = b'Hola mundo'
+    mensaje = input('Ingrese un mensaje a firmar: ')
+    M = mensaje.encode()
 
     gen_firmas = Signer(params, private_seed, M)
 
