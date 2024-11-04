@@ -62,7 +62,7 @@ class Signer:
             # print(f'v: {v}')
             A = self.BuildAugmentedMatrix(C, L, Q1, T, h, v)
 
-            break
+            
 
 
 
@@ -104,13 +104,13 @@ class Signer:
 
         # print(f'bit_string: {bit_string} y su longitud: {len(bit_string)}')
 
-        h = np.zeros(self.m, dtype=int)
+        h = np.zeros((self.m, 1), dtype=int)
 
         for i in range(self.m):
             # Tomar bloques de `r` bits y convertirlos en enteros
             r_bits = bit_string[i * self.r: (i + 1) * self.r]
             # print(f'r_bits: {r_bits} y su longitud: {len(r_bits)}')
-            h[i] = int(r_bits, 2)
+            h[i,0] = int(r_bits, 2)
 
         return h
     
@@ -121,7 +121,77 @@ class Signer:
         # print(f't: {T.shape}')
         # print(f'h: {h.shape}')
         # print(f'v: {v.shape}')
+
+        RHS = self.calculate_RHS(h, C, L, v)
+
+        LHS = self.calculate_LHS(L, T)
+
+        mod_value = 2 ** self.r  # Definir el módulo para F_{2^r}
+
+        for k in range(self.m):
+            # Paso 4: Calcular P_{k,1} y P_{k,2}
+            Pk_1 = self.keygen.findPk1(k, Q1)  # Función que debe devolver una matriz (v, v)
+            Pk_2 = self.keygen.findPk2(k, Q1)  # Función que debe devolver una matriz (v, m)
+
+            # Paso 6: Actualizar RHS[k] con v^T * P_{k,1} * v
+            RHS[k] = (RHS[k] - v.T @ Pk_1 @ v) % mod_value  # Resta cuadrática en variables de vinagre
+
+            # Paso 7: Calcular F_{k,2} como -(P_{k,1} + P_{k,1}^T)T + P_{k,2}
+            Fk_2 = (-(Pk_1 + Pk_1.T) @ T + Pk_2) % mod_value
+
+            # Paso 8: Actualizar LHS[k] con v^T * F_{k,2}
+            LHS[k] = (LHS[k] + v @ Fk_2) % mod_value  # Términos bilineales en vinagre y aceite
+
+        # Paso 4: Concatenar LHS y RHS
+        augmented_matrix = np.hstack((LHS, RHS))
+
+        # print(f'Augmented matrix: {augmented_matrix.shape}')
+
+        return augmented_matrix
+
+    def calculate_RHS(self, h, C, L, v):
+        # print(f'c: {C.shape}')
+        # print(f'l: {L.shape}')
+        # # print(f'q1: {Q1.shape}')
+        # # print(f't: {T.shape}')
+        # print(f'h: {h.shape}')
+        # print(f'v: {v.shape}')
+
+        # Concatenar `v` con un vector de ceros de tamaño `m`
+        v_padded = np.vstack((v.reshape(-1, 1), np.zeros((self.m, 1), dtype=int)))
         
+        # Transponer `v_padded` para hacer `(v || 0)^T`
+        v_padded_T = v_padded.T
+        
+        # Calcular L(v||0)^T
+        Lv = L.dot(v_padded_T.T)
 
+        mod_value = 2 ** self.r
+        Lv = Lv % mod_value
 
+        # Calcular RHS = h - C - L(v||0)^T
+        RHS = h - C - Lv
 
+        print(f'RHS: {RHS.shape}')
+
+        # Aplicar operación módulo 2^r para mantener los valores en F_{2^r}
+        RHS = RHS % mod_value 
+
+        return RHS
+    
+    def calculate_LHS(self, L, T):
+        # Negar la matriz `T`
+        T_neg = -T % (2 ** self.r)  # Aplicamos módulo 2^r para mantener los valores en F_{2^r}
+
+        # Crear la matriz identidad `1_m`
+        identity_m = np.eye(self.m, dtype=int)
+
+        # Concatenar `-T` y `1_m` verticalmente para formar una matriz de tamaño (v + m, m)
+        concat_matrix = np.vstack((T_neg, identity_m))
+
+        # Multiplicar L por la matriz concatenada y aplicar módulo 2^r
+        mod_value = 2 ** self.r
+        LHS = (L.dot(concat_matrix)) % mod_value  # Resultado en el campo F_{2^r}
+
+        # print(f'LHS: {LHS} tamaño: {LHS.shape}')
+        return LHS
