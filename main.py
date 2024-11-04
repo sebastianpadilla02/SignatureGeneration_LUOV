@@ -53,21 +53,27 @@ if __name__ == "__main__":
     if(op == 1):
         publica = 'public_key_LUOV-7-57-197.bin'
         privada = 'private_key_LUOV-7-57-197.bin'
+        firma = 'signature_LUOV-7-57-197.bin'
     elif(op == 2):
         publica = 'public_key_LUOV-7-83-283.bin'
         privada = 'private_key_LUOV-7-83-283.bin'
+        firma = 'signature_LUOV-7-83-283.bin'
     elif op == 3:
         publica = 'public_key_LUOV-7-110-374.bin'
         privada = 'private_key_LUOV-7-110-374.bin'
+        firma = 'signature_LUOV-7-110-374.bin'
     elif op == 4:
         publica = 'public_key_LUOV-47-42-182.bin'
         privada = 'private_key_LUOV-47-42-182.bin'
+        firma = 'signature_LUOV-47-42-182.bin'
     elif op == 5:
         publica = 'public_key_LUOV-61-60-261.bin'
         privada = 'private_key_LUOV-61-60-261.bin'
+        firma = 'signature_LUOV-61-60-261.bin'
     elif op == 6:
         publica = 'public_key_LUOV-79-76-341.bin'
         privada = 'private_key_LUOV-79-76-341.bin'
+        firma = 'signature_LUOV-79-76-341.bin'
 
     # Abrir el archivo en la carpeta 'keys' en modo binario
     publica = os.path.join('keys', publica)
@@ -88,4 +94,13 @@ if __name__ == "__main__":
 
     print(f'Firma: {gen_firmas.s}')
     print(f'Salt: {gen_firmas.salt}')
+
+    signature = gen_firmas.encode_signature()
+
+    print(f'Firma codificada: {signature}')
+
+    firma = os.path.join('signatures', firma)
+
+    with open(firma, "wb") as file:
+        file.write(signature)
     

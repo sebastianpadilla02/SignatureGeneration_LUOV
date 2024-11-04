@@ -310,3 +310,35 @@ class Signer:
         s = (block_matrix @ s_prime) % mod_value
 
         return s
+    
+    def encode_signature(self):
+        """
+        Codifica la firma `s` y la concatena con el `salt`.
+
+        Parámetros:
+        - s: np.array con los elementos de la firma en F_{2^r}
+        - salt: bytes, el valor de `salt` de 16 bytes
+        - r: int, el tamaño de cada elemento en bits (e.g., 27, 247, 261, 279)
+
+        Retorna:
+        - Un bytearray que representa la firma codificada y el salt concatenado.
+        """
+        # Calcular el número de bytes necesarios para cada elemento en F_{2^r}
+        num_bytes = (self.r + 7) // 8  # Redondear hacia arriba para obtener el número de bytes
+        
+        # Codificar cada elemento en `s` en `num_bytes` bytes
+        encoded_elements = bytearray()
+        for element in self.s:
+            encoded_bytes = int(element).to_bytes(num_bytes, byteorder='big')
+            encoded_elements.extend(encoded_bytes)
+        
+        # Calcular el número total de bits y verificar si es múltiplo de 8
+        total_bits = len(self.s) * self.r
+        if total_bits % 8 != 0:
+            padding_bits = 8 - (total_bits % 8)
+            encoded_elements.extend(b'\x00' * (padding_bits // 8))  # Añadir los bytes de padding
+        
+        # Añadir el `salt` al final
+        encoded_elements.extend(self.salt)
+
+        return bytes(encoded_elements)
