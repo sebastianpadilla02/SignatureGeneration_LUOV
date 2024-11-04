@@ -36,6 +36,34 @@ class Signer:
         h = self.calculate_h(M, salt)
         # print(f'h: {h}')
 
+        solution_found = False
+        s_prime = None
+
+        while not solution_found:
+            num_bits = self.r * self.v
+            num_bytes = (num_bits + 7) // 8  # Convertir a número de bytes redondeando hacia arriba
+
+            # Generar v aleatorio de tamaño rv/8 bytes
+            v_bytes = os.urandom(num_bytes)
+
+            # Convertir el hash en un vector sobre F_{2^r} y almacenar en un array de numpy
+            bit_string = ''.join(f'{byte:08b}' for byte in v_bytes)  # Convertir los bytes a una cadena de bits
+
+            # print(f'bit_string: {bit_string} y su longitud: {len(bit_string)}')
+
+            v = np.zeros(self.v, dtype=int)
+
+            for i in range(self.v):
+                # Tomar bloques de `r` bits y convertirlos en enteros
+                r_bits = bit_string[i * self.r: (i + 1) * self.r]
+                # print(f'r_bits: {r_bits} y su longitud: {len(r_bits)}')
+                v[i] = int(r_bits, 2)
+
+            # print(f'v: {v}')
+            A = self.BuildAugmentedMatrix(C, L, Q1, T, h, v)
+
+            break
+
 
 
     def derive_public_seed_and_T(self, private_seed) -> Tuple[bytes, np.ndarray]:
@@ -85,3 +113,15 @@ class Signer:
             h[i] = int(r_bits, 2)
 
         return h
+    
+    def BuildAugmentedMatrix(self, C, L, Q1, T, h, v):
+        # print(f'c: {C.shape}')
+        # print(f'l: {L.shape}')
+        # print(f'q1: {Q1.shape}')
+        # print(f't: {T.shape}')
+        # print(f'h: {h.shape}')
+        # print(f'v: {v.shape}')
+        
+
+
+
