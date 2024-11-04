@@ -93,8 +93,9 @@ if __name__ == "__main__":
 
     gen_firmas = Signer(params, private_seed, M)
 
-    print(f'Firma: {gen_firmas.s}')
-    print(f'Salt: {gen_firmas.salt}')
+    # print(f'Firma: {gen_firmas.s}')
+    # print(f'Firma: {gen_firmas.s.shape}')
+    # print(f'Salt: {gen_firmas.salt}')
 
     signature = gen_firmas.encode_signature()
 

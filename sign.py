@@ -42,8 +42,10 @@ class Signer:
 
         solution_found = False
         s_prime = None
+        cont = 0
 
         while not solution_found:
+            cont += 1
             num_bits = self.r * self.v
             num_bytes = (num_bits + 7) // 8  # Convertir a número de bytes redondeando hacia arriba
 
@@ -66,6 +68,8 @@ class Signer:
             # print(f'v: {v}')
             A = self.BuildAugmentedMatrix(C, L, Q1, T, h, v)
 
+            print(f'cont: {cont}')
+
             # Resolver el sistema lineal A[:, :-1] * x = A[:, -1] usando eliminación gaussiana
 
             # Extraer la submatriz de coeficientes y el vector de soluciones
@@ -74,7 +78,7 @@ class Signer:
 
             try:
                 # Resolver el sistema para `o`
-                o = self.gauss_jordan_modular(coef_matrix, solution_vector, mod_value)
+                o = self.gauss_jordan_modular(A, mod_value)
                 # o = np.linalg.solve(coef_matrix, solution_vector) % mod_value
 
                 # Verificar si `o` es una solución válida
@@ -92,8 +96,8 @@ class Signer:
                 continue
 
 
-        print(f'coefs: {coef_matrix}')
-        print(f'solution: {solution_vector}')
+        # print(f'coefs: {coef_matrix}')
+        # print(f'solution: {solution_vector}')
 
         # print(f'o: {o}')
         # print(f's_prime: {s_prime}')
@@ -166,6 +170,9 @@ class Signer:
 
         LHS = self.calculate_LHS(L, T)
 
+        # print(f'RHS: {RHS.shape}')
+        # print(f'LHS: {LHS.shape}')
+
         mod_value = 2 ** self.r  # Definir el módulo para F_{2^r}
 
         for k in range(self.m):
@@ -184,6 +191,10 @@ class Signer:
 
         # Paso 4: Concatenar LHS y RHS
         augmented_matrix = np.hstack((LHS, RHS))
+
+        # print(f'augmented matrix: {augmented_matrix}')
+
+        # print(f'RHS: {RHS}')
 
         # print(f'Augmented matrix: {augmented_matrix.shape}')
 
@@ -236,24 +247,16 @@ class Signer:
         # print(f'LHS: {LHS} tamaño: {LHS.shape}')
         return LHS
     
-    def gauss_jordan_modular(self, A, b, mod_value):
-        """
-        Resolver el sistema de ecuaciones Ax = b usando eliminación Gaussiana en módulo `mod_value`.
-        
-        Parámetros:
-        A -- matriz de coeficientes (entera)
-        b -- vector de soluciones (entero)
-        mod_value -- valor del módulo (2^r en tu caso)
-        
-        Retorna:
-        x -- solución entera en el campo F_{mod_value} si el sistema tiene solución única.
-        """
+    def gauss_jordan_modular(self, augmented_matrix, mod_value):
         # Concatenar A y b en una matriz aumentada
-        A = A % mod_value
-        b = b % mod_value
-        augmented_matrix = np.hstack((A, b.reshape(-1, 1)))  # Matriz aumentada (A|b)
-        
-        rows, cols = augmented_matrix.shape
+        # A = A % mod_value
+        # b = b % mod_value
+        # augmented_matrix = np.hstack((A, b.reshape(-1, 1)))  # Matriz aumentada (A|b)
+
+
+        # print(f'Augmented matrix: {augmented_matrix}')
+
+        rows, cols = augmented_matrix.shape  
         
         # Eliminación Gaussiana
         for i in range(rows):
@@ -312,23 +315,30 @@ class Signer:
         return s
     
     def encode_signature(self):
-        """
-        Codifica la firma `s` y la concatena con el `salt`.
 
-        Parámetros:
-        - s: np.array con los elementos de la firma en F_{2^r}
-        - salt: bytes, el valor de `salt` de 16 bytes
-        - r: int, el tamaño de cada elemento en bits (e.g., 27, 247, 261, 279)
+        irreducible_polynomials = {
+            7: 0b10000011,          # x^7 + x + 1
+            47: 0b100000000000000000000000000000000000000000100001,  # x^47 + x^5 + 1
+            61: 0b10000000000000000000000000000000000000000000000000000000100111,  # x^61 + x^5 + x^2 + x + 1
+            79: 0b10000000000000000000000000000000000000000000000000000000000000000000001000000001   # x^79 + x^9 + 1
+        }
 
-        Retorna:
-        - Un bytearray que representa la firma codificada y el salt concatenado.
-        """
+        # Obtener el polinomio irreducible según `r`
+        poly_irreducible = irreducible_polynomials.get(self.r)
+        if poly_irreducible is None:
+            raise ValueError(f"No hay polinomio irreducible definido para F_{{2^{self.r}}}")
+
         # Calcular el número de bytes necesarios para cada elemento en F_{2^r}
         num_bytes = (self.r + 7) // 8  # Redondear hacia arriba para obtener el número de bytes
         
         # Codificar cada elemento en `s` en `num_bytes` bytes
         encoded_elements = bytearray()
         for element in self.s:
+            # Reducir el elemento módulo el polinomio irreducible
+            element = int(element[0])
+            
+            element = self.reduce_mod_irreducible(element, poly_irreducible)
+
             encoded_bytes = int(element).to_bytes(num_bytes, byteorder='big')
             encoded_elements.extend(encoded_bytes)
         
@@ -342,3 +352,12 @@ class Signer:
         encoded_elements.extend(self.salt)
 
         return bytes(encoded_elements)
+
+    def reduce_mod_irreducible(self, value, irreducible_poly):
+        
+        while value.bit_length() >= irreducible_poly.bit_length():
+            print(f'entré')
+            shift = value.bit_length() - irreducible_poly.bit_length()
+            value ^= irreducible_poly << shift
+
+        return value
