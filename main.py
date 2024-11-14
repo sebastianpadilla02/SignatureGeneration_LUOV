@@ -29,7 +29,7 @@ def lectura_params():
     return params, op
 
 # Función que genera la semilla privada de 32 bytes de manera aleatoria
-def generar_semilla_privada():
+def generar_semilla_privada() -> bytes:
     private_seed = os.urandom(32)
     return private_seed
 
