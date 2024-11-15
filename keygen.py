@@ -1,6 +1,7 @@
 import hashlib
 import numpy as np
 from typing import Tuple
+import cupy as cp
 
 class KG:
 
@@ -15,7 +16,7 @@ class KG:
         self.public_key
 
     #Método KeyGen que genera la llave pública
-    def KeyGen(self, private_seed: bytes):
+    def KeyGen(self, private_seed: bytes) -> None:
         #Generación de la función hashing H(SHAKE 128 o 256)
         private_sponge = self.InitializeAndAbsorb(private_seed)
 
@@ -45,18 +46,18 @@ class KG:
         return shake
 
     #Función que de una esponja privada exprime valores necesarios para la semilla publica y la matriz T
-    def SqueezeT(self, private_sponge: hashlib) -> Tuple[bytes, np.ndarray]:
+    def SqueezeT(self, private_sponge: hashlib) -> Tuple[bytes, cp.ndarray]:
         #Inicializar la matriz T de dimensiones v x m
-        T = np.zeros((self.v, self.m), dtype = int)
+        T = cp.zeros((self.v, self.m), dtype = int)
 
         # Calcular el número de bytes necesarios para generar una matriz de v x m bits
         num_bytes = ((self.m + 7) // 8) * self.v  # Redondear al mayor(función techo) para asegurarse de tener suficientes bits
         
         # Exprimir los bytes necesarios(32 para la semilla privada y num_bytes para la matriz T)
-        random_bytes = private_sponge.digest(32 + num_bytes)  
+        random_bytes = private_sponge.digest(32 + num_bytes)
 
         # Separa los primeros 32 bytes para la semilla pública
-        public_seed = random_bytes[:32]  
+        public_seed = random_bytes[:32]
 
         # Los bytes restantes son para la matriz T
         random_bytes_for_T = random_bytes[32:]
@@ -67,7 +68,7 @@ class KG:
             end_byte_index = (i + 1) * ((self.m + 7) // 8)  # Final del rango de bytes para la fila i
 
             byte_chunk = random_bytes_for_T[start_byte_index:end_byte_index]  # Obtener los bytes correspondientes
-        
+            
             # Tomar todos los bytes excepto el último
             all_but_last = byte_chunk[:-1]
 

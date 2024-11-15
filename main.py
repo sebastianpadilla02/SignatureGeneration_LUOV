@@ -77,32 +77,34 @@ if __name__ == "__main__":
 
     # Abrir el archivo en la carpeta 'keys' en modo binario
     publica = os.path.join('keys', publica)
+    # print(public_key)
 
     #Se crean loas archivos y se almacenan los bytes de cada semilla en su respectivo archivo
     with open(publica, 'wb') as file:
         file.write(public_key)
 
     privada = os.path.join('keys', privada)
+    print(private_key)
 
     with open(privada, 'wb') as file:
         file.write(private_key)
 
-    #Se crea un mensaje a firmar
-    mensaje = input('Ingrese un mensaje a firmar: ')
-    M = mensaje.encode()
+    # #Se crea un mensaje a firmar
+    # mensaje = input('Ingrese un mensaje a firmar: ')
+    # M = mensaje.encode()
 
-    gen_firmas = Signer(params, private_seed, M)
+    # gen_firmas = Signer(params, private_seed, M)
 
-    # print(f'Firma: {gen_firmas.s}')
-    # print(f'Firma: {gen_firmas.s.shape}')
-    # print(f'Salt: {gen_firmas.salt}')
+    # # print(f'Firma: {gen_firmas.s}')
+    # # print(f'Firma: {gen_firmas.s.shape}')
+    # # print(f'Salt: {gen_firmas.salt}')
 
-    signature = gen_firmas.encode_signature()
+    # signature = gen_firmas.encode_signature()
 
-    print(f'Firma codificada: {signature}')
+    # print(f'Firma codificada: {signature}')
 
-    firma = os.path.join('signatures', firma)
+    # firma = os.path.join('signatures', firma)
 
-    with open(firma, "wb") as file:
-        file.write(signature)
+    # with open(firma, "wb") as file:
+    #     file.write(signature)
     
