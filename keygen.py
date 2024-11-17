@@ -1,7 +1,8 @@
 import hashlib
 import numpy as np
 from typing import Tuple
-import cupy as cp
+#import cupy as cp
+
 
 class KG:
 
@@ -46,9 +47,9 @@ class KG:
         return shake
 
     #Función que de una esponja privada exprime valores necesarios para la semilla publica y la matriz T
-    def SqueezeT(self, private_sponge: hashlib) -> Tuple[bytes, cp.ndarray]:
+    def SqueezeT(self, private_sponge: hashlib) -> Tuple[bytes, np.ndarray]:
         #Inicializar la matriz T de dimensiones v x m
-        T = cp.zeros((self.v, self.m), dtype = int)
+        T = np.zeros((self.v, self.m), dtype = int)
 
         # Calcular el número de bytes necesarios para generar una matriz de v x m bits
         num_bytes = ((self.m + 7) // 8) * self.v  # Redondear al mayor(función techo) para asegurarse de tener suficientes bits
@@ -138,7 +139,7 @@ class KG:
                 #Si se necesitan 2 bytes, se añade 1 byte entero de manera normal
                 if(bytes_needed == 2):
                     for l in range(16*i, 16*i + 8):
-                        C[l, 0] = bits[bits_added]
+                        C[l, 0] = int(bits[bits_added])
                         bits_added += 1
                     
                     pos = l + 1
@@ -149,13 +150,13 @@ class KG:
 
                 # Se añaden los bits a la matriz C
                 for h in range(bits_restantes):
-                    C[pos, 0] = bits_menos_significativos[h]
+                    C[pos, 0] = int(bits_menos_significativos[h])
                     pos += 1
             else:
                 bits_added = 0   # Contador de bits añadidos
                 # Añadir columna a columna cada bit generado
                 for c in range(16*i, 16*i + 16):
-                    C[c, 0] = bits[bits_added]
+                    C[c, 0] = int(bits[bits_added])
                     bits_added += 1
             
             #Generar la matriz L
@@ -180,7 +181,7 @@ class KG:
                     #Si se necesitan 2 bytes para completar las filas, se añade un byte normal
                     if(bytes_needed == 2):
                         for l in range(16*i, 16*i + 8):
-                            L[l, column] = bits_2_bytes[bits_added]
+                            L[l, column] = int(bits_2_bytes[bits_added])
                             bits_added += 1
                         
                         pos = l + 1
@@ -191,7 +192,7 @@ class KG:
                     bits_menos_significativos = bits_2_bytes[-bits_added:]
 
                     for h in range(bits_restantes):
-                        L[pos, column] = bits_menos_significativos[h]
+                        L[pos, column] = int(bits_menos_significativos[h])
                         pos += 1
 
                     column += 1
@@ -200,7 +201,7 @@ class KG:
                 # Añadir columna a columna cada bit generado
                 for j in range(self.n):
                     for c in range(16*i, 16*i + 16):
-                        L[c, j] = bits_L[bits_added]
+                        L[c, j] = int(bits_L[bits_added])
                         bits_added += 1
             
             #Generar la matriz Q1
@@ -225,7 +226,7 @@ class KG:
                     #Se añade un byte de manera normal si se necesitan 2 bytes
                     if(bytes_needed == 2):
                         for l in range(16*i, 16*i + 8):
-                            Q1[l, column] = bits_2_bytes[bits_added]
+                            Q1[l, column] = int(bits_2_bytes[bits_added])
                             bits_added += 1
                         
                         pos = l + 1
@@ -236,7 +237,7 @@ class KG:
                     bits_menos_significativos = bits_2_bytes[-bits_added:]
 
                     for h in range(bits_restantes):
-                        Q1[pos, column] = bits_menos_significativos[h]
+                        Q1[pos, column] = int(bits_menos_significativos[h])
                         pos += 1
 
                     column += 1
@@ -246,9 +247,9 @@ class KG:
                 #Se añaden columna a columna los bits
                 for j in range ((self.v * (self.v + 1)) // 2 + self.v * self.m):
                     for c in range(16*i, 16*i + 16):
-                        Q1[c, j] = bits_Q1[bits_added]
+                        Q1[c, j] = int(bits_Q1[bits_added])
                         bits_added += 1
-        
+
         return C, L, Q1
 
     #Encontrar Pk1
