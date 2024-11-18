@@ -12,6 +12,7 @@ class KG:
         self.m = params[1]
         self.v = params[2]
         self.SHAKE = params[3]
+        self.irreducible_polynomial = params[4]
         self.n = self.v + self.m
         self.KeyGen(private_seed)
         self.public_key

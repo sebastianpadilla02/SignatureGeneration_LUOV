@@ -11,20 +11,27 @@ def lectura_params():
         if(op < 1 and op > 6):
             print('Ingrese una opción válida')
 
+    irreducible_polynomials = {
+        7: 0b10000011,          # x^7 + x + 1
+        47: 0b100000000000000000000000000000000000000000100001,  # x^47 + x^5 + 1
+        61: 0b10000000000000000000000000000000000000000000000000000000100111,  # x^61 + x^5 + x^2 + x + 1
+        79: 0b10000000000000000000000000000000000000000000000000000000000000000000001000000001   # x^79 + x^9 + 1
+    }
+
     #Asignación de parámetros
     #params = [r, m, v, SHAKE]
     if op == 1:
-        params = [7, 57, 197, 128]
+        params = [7, 57, 197, 128, irreducible_polynomials[7]]
     elif op == 2:
-        params = [7, 83, 283, 256]
+        params = [7, 83, 283, 256, irreducible_polynomials[7]]
     elif op == 3:
-        params = [7, 110, 374, 256]
+        params = [7, 110, 374, 256, irreducible_polynomials[7]]
     elif op == 4:
-        params = [47, 42, 182, 128]
+        params = [47, 42, 182, 128, irreducible_polynomials[47]]
     elif op == 5:
-        params = [61, 60, 261, 256]
+        params = [61, 60, 261, 256, irreducible_polynomials[61]]
     elif op == 6:
-        params = [79, 76, 341, 256]
+        params = [79, 76, 341, 256, irreducible_polynomials[79]]
 
     return params, op
 
@@ -89,22 +96,22 @@ if __name__ == "__main__":
     with open(privada, 'wb') as file:
         file.write(private_key)
 
-    # #Se crea un mensaje a firmar
-    # mensaje = input('Ingrese un mensaje a firmar: ')
-    # M = mensaje.encode()
+    #Se crea un mensaje a firmar
+    mensaje = input('Ingrese un mensaje a firmar: ')
+    M = mensaje.encode()
 
-    # gen_firmas = Signer(params, private_seed, M)
+    gen_firmas = Signer(params, private_seed, M)
 
-    # # print(f'Firma: {gen_firmas.s}')
-    # # print(f'Firma: {gen_firmas.s.shape}')
-    # # print(f'Salt: {gen_firmas.salt}')
+    # print(f'Firma: {gen_firmas.s}')
+    # print(f'Firma: {gen_firmas.s.shape}')
+    # print(f'Salt: {gen_firmas.salt}')
 
-    # signature = gen_firmas.encode_signature()
+    signature = gen_firmas.encode_signature()
 
-    # print(f'Firma codificada: {signature}')
+    print(f'Firma codificada: {signature}')
 
-    # firma = os.path.join('signatures', firma)
+    firma = os.path.join('signatures', firma)
 
-    # with open(firma, "wb") as file:
-    #     file.write(signature)
+    with open(firma, "wb") as file:
+        file.write(signature)
     
