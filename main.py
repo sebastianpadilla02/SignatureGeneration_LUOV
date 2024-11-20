@@ -1,6 +1,8 @@
 import os
 from keygen import KG
-from sign import Signer
+from sign2 import Signer
+import galois
+import numpy as np
 
 def lectura_params():
     op = 0
@@ -12,10 +14,10 @@ def lectura_params():
             print('Ingrese una opción válida')
 
     irreducible_polynomials = {
-        7: 0b10000011,          # x^7 + x + 1
-        47: 0b100000000000000000000000000000000000000000100001,  # x^47 + x^5 + 1
-        61: 0b10000000000000000000000000000000000000000000000000000000100111,  # x^61 + x^5 + x^2 + x + 1
-        79: 0b10000000000000000000000000000000000000000000000000000000000000000000001000000001   # x^79 + x^9 + 1
+        7: galois.GF(2 ** 7, irreducible_poly = 0x83),          # x^7 + x + 1
+        47: galois.GF(2 ** 47, irreducible_poly = 0x800000000021),  # x^47 + x^5 + 1
+        61: galois.GF(2 ** 61, irreducible_poly= 0x2000000000000027),  # x^61 + x^5 + x^2 + x + 1
+        79: galois.GF(2** 79, irreducible_poly= 0x80000000000000000201)   # x^79 + x^9 + 1
     }
 
     #Asignación de parámetros
@@ -101,6 +103,10 @@ if __name__ == "__main__":
     M = mensaje.encode()
 
     gen_firmas = Signer(params, private_seed, M)
+
+    # print(np.array_equal(llaves.C, gen_firmas.C))
+    # print(np.array_equal(llaves.L, gen_firmas.L))
+    # print(np.array_equal(llaves.Q1, gen_firmas.Q1))
 
     # print(f'Firma: {gen_firmas.s}')
     # print(f'Firma: {gen_firmas.s.shape}')

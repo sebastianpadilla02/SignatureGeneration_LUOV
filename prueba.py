@@ -1,13 +1,13 @@
-import cupy as cp
-import time
+import galois
 
-# Crear un array grande en la GPU
-print("Creando matriz grande en la GPU...")
-start = time.time()
-a = cp.random.random((10000, 10000))
-b = cp.random.random((10000, 10000))
-result = cp.dot(a, b)  # Producto punto en GPU
-cp.cuda.Device(0).synchronize()  # Sincronizar para medir tiempo correctamente
-end = time.time()
+irreducible_polynomials = {
+    7: galois.GF(2 ** 7, irreducible_poly = 0x83),          # x^7 + x + 1
+    47: galois.GF(2 ** 47, irreducible_poly = 0x800000000021),  # x^47 + x^5 + 1
+    61: galois.GF(2 ** 61, irreducible_poly= 0x2000000000000027),  # x^61 + x^5 + x^2 + x + 1
+    79: galois.GF(2** 79, irreducible_poly= 0x80000000000000000201)   # x^79 + x^9 + 1
+}
 
-print(f"Tiempo de cálculo en la GPU: {end - start:.2f} segundos")
+print(f'Parámetros: {irreducible_polynomials[7].irreducible_poly}')
+print(f'Parámetros: {irreducible_polynomials[47].irreducible_poly}')
+print(f'Parámetros: {irreducible_polynomials[61].irreducible_poly}')
+print(f'Parámetros: {irreducible_polynomials[79].irreducible_poly}')
