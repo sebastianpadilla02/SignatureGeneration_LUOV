@@ -13,7 +13,7 @@ class Signer:
         self.m = params[1]
         self.v = params[2]
         self.SHAKE = params[3]
-        self.irreducible_polynomial = params[4]
+        self.field = params[4]
         
         # Reutilizamos la clase KG para derivar la semilla pública y T
         self.keygen = KG(params, private_seed)
@@ -211,11 +211,15 @@ class Signer:
         # print(f'h: {h.shape}')
         # print(f'v: {v.shape}')
 
+        # field = self.irreducible_polynomial
+
         # Concatenar `v` con un vector de ceros de tamaño `m`
         v_padded = np.vstack((v.reshape(-1, 1), np.zeros((self.m, 1), dtype=int)))
         
         # Transponer `v_padded` para hacer `(v || 0)^T`
         v_padded_T = v_padded.T
+
+        v_padded_gal = self.field(v_padded_T)
         
         # Calcular L(v||0)^T
         Lv = L.dot(v_padded_T.T)
