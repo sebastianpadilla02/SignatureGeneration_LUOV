@@ -31,7 +31,7 @@ class Signer:
         C, L, Q1 = self.G(public_seed)
 
         # print(f'C: {C}')
-        # print(f'L: {L}')
+        print(f'L: {L}')
         # print(f'Q1: {Q1}')
 
         salt = os.urandom(16)
@@ -69,25 +69,32 @@ class Signer:
             # print(f'v: {v}')
             A = self.BuildAugmentedMatrix(C, L, Q1, T, h, v)
 
+            # print(f'A: {A} y su tamaño: {A.shape} y tipo: {type(A)}')
+
             print(f'cont: {cont}')
 
             # Resolver el sistema lineal A[:, :-1] * x = A[:, -1] usando eliminación gaussiana
 
             # Extraer la submatriz de coeficientes y el vector de soluciones
 
-            coef_matrix = self.reduce_matrix(A[:, :-1], self.irreducible_polynomial)
+            coef_matrix = A[:, :-1]  # Matriz de coeficientes
 
-            print(f'coef_matrix: {coef_matrix}')
+            # print(f'coef_matrix: {coef_matrix} y su tamaño: {coef_matrix.shape} y tipo: {type(coef_matrix)}') 
 
-            solution_vector = self.reduce_vector(A[:, -1]) 
+            solution_vector = A[:, -1]  # Vector de soluciones 
+
+            # print(f'solution_vector: {solution_vector} y su tamaño: {solution_vector.shape} y tipo: {type(solution_vector)}')
 
             try:
                 # Resolver el sistema para `o`
-                o = self.gauss_jordan_modular(A)
+                o = np.linalg.solve(coef_matrix, solution_vector)  
+
+                # o = self.field(o)
                 # o = np.linalg.solve(coef_matrix, solution_vector) % mod_value
 
                 # Verificar si `o` es una solución válida
-                is_solution = np.all((coef_matrix @ o % mod_value) == (solution_vector % mod_value))
+
+                is_solution = np.all((coef_matrix @ o) == (solution_vector))
 
                 if is_solution:
                     # Si se encontró una solución única, construir `s'`
@@ -100,7 +107,7 @@ class Signer:
                 # Si no se encontró una solución, intentar con otro `v`
                 continue
 
-
+        # print(f's_prime: {s_prime} y su tamaño: {s_prime.shape} y tipo: {type(s_prime)}')
         # print(f'coefs: {coef_matrix}')
         # print(f'solution: {solution_vector}')
 
@@ -109,7 +116,7 @@ class Signer:
 
 
         # Construir el vector de firma `s` como se especifica en el algoritmo
-        s = self.build_signature(T, v, o, mod_value, s_prime)
+        s = self.build_signature(T, v, o, s_prime)
 
         self.salt = salt
         self.s = s
@@ -177,25 +184,31 @@ class Signer:
 
         # print(f'RHS: {RHS.shape}')
         # print(f'LHS: {LHS.shape}')
+        h, C, L, v, T = self.field(h), self.field(C), self.field(L), self.field(v), self.field(T)
 
         for k in range(self.m):
             # Paso 4: Calcular P_{k,1} y P_{k,2}
             Pk_1 = self.keygen.findPk1(k, Q1)  # Función que debe devolver una matriz (v, v)
             Pk_2 = self.keygen.findPk2(k, Q1)  # Función que debe devolver una matriz (v, m)
 
+            Pk_1 = self.field(Pk_1)
+            Pk_2 = self.field(Pk_2)
+
             # Paso 6: Actualizar RHS[k] con v^T * P_{k,1} * v
             RHS[k] = (RHS[k] - v.T @ Pk_1 @ v) # Resta cuadrática en variables de vinagre
 
             # Paso 7: Calcular F_{k,2} como -(P_{k,1} + P_{k,1}^T)T + P_{k,2}
-            Fk_2 = (-(Pk_1 + Pk_1.T) @ T + Pk_2) % mod_value
+            Fk_2 = (-(Pk_1 + Pk_1.T) @ T + Pk_2)
 
             # Paso 8: Actualizar LHS[k] con v^T * F_{k,2}
-            LHS[k] = (LHS[k] + v @ Fk_2) % mod_value  # Términos bilineales en vinagre y aceite
+            LHS[k] = (LHS[k] + v @ Fk_2)  # Términos bilineales en vinagre y aceite
 
         # Paso 4: Concatenar LHS y RHS
         augmented_matrix = np.hstack((LHS, RHS))
 
-        # print(f'augmented matrix: {augmented_matrix}')
+        augmented_matrix = self.field(augmented_matrix)
+
+        # print(f'augmented matrix: {augmented_matrix} y su tamaño: {augmented_matrix.shape} y tipo: {type(augmented_matrix)}') 
 
         # print(f'RHS: {RHS}')
 
@@ -213,18 +226,29 @@ class Signer:
 
         # field = self.irreducible_polynomial
 
+        # print(f'L: {L} y su tamaño: {L.shape} y tipo: {type(L)}')
+
         # Concatenar `v` con un vector de ceros de tamaño `m`
-        v_padded = np.vstack((v.reshape(-1, 1), np.zeros((self.m, 1), dtype=int)))
-        
+        v_padded = self.field(np.vstack((v.reshape(-1, 1), np.zeros((self.m, 1), dtype=int))))
+
+        # print(f'v_padded: {v_padded} y su tamaño: {v_padded.shape} y tipo: {type(v_padded)}')
+     
         # Transponer `v_padded` para hacer `(v || 0)^T`
         v_padded_T = v_padded.T
 
-        v_padded_gal = self.field(v_padded_T)
+        # print(f'v_padded_T: {v_padded_T} y su tamaño: {v_padded_T.shape} y tipo: {type(v_padded_T)}')
+
+        L = self.field(L)
         
         # Calcular L(v||0)^T
         Lv = L.dot(v_padded_T.T)
 
-        Lv = Lv % mod_value
+        # print(f'Lv: {Lv} y su tamaño: {Lv.shape} y tipo: {type(Lv)}')
+
+        h = self.field(h)
+        C = self.field(C)
+
+
 
         # Calcular RHS = h - C - L(v||0)^T
         RHS = h - C - Lv
@@ -232,82 +256,53 @@ class Signer:
         # print(f'RHS: {RHS.shape}')
 
         # Aplicar operación módulo 2^r para mantener los valores en F_{2^r}
-        RHS = RHS % mod_value 
-
+        # RHS = RHS % mod_value 
+        # print(f'RHS: {RHS} y type: {type(RHS)}')
         return RHS
     
     def calculate_LHS(self, L, T):
         # Negar la matriz `T`
-        T_neg = -T % (2 ** self.r)  # Aplicamos módulo 2^r para mantener los valores en F_{2^r}
+        L = self.field(L)
+        T  = self.field(T)
+        # np.set_printoptions(threshold=np.inf)
+        # print(f'L: {L} y su tamaño: {L.shape} y tipo: {type(L)}')
+        # T = self.field(T)
+        # print(f'T: {T} y su tamaño: {T.shape} y tipo: {type(T)}')
+
+        T_neg = -T  # Aplicamos módulo 2^r para mantener los valores en F_{2^r}
 
         # Crear la matriz identidad `1_m`
         identity_m = np.eye(self.m, dtype=int)
 
         # Concatenar `-T` y `1_m` verticalmente para formar una matriz de tamaño (v + m, m)
         concat_matrix = np.vstack((T_neg, identity_m))
+        # print(f'concat_matrix: {concat_matrix} y su tamaño: {concat_matrix.shape} y tipo: {type(concat_matrix)}')
 
-        # Multiplicar L por la matriz concatenada y aplicar módulo 2^r
-        mod_value = 2 ** self.r
-        LHS = (L.dot(concat_matrix)) % mod_value  # Resultado en el campo F_{2^r}
+        # concat_matrix = self.field(concat_matrix)
 
-        # print(f'LHS: {LHS} tamaño: {LHS.shape}')
+        # Calcular L(-T || 1_m)
+        LHS = (L.dot(concat_matrix))  # Resultado en el campo F_{2^r}
+        #np.set_printoptions(threshold=np.inf)
+        #print(f'LHS: {LHS} tamaño: {LHS.shape} y tipo: {type(LHS)}')
         return LHS
     
-    def gauss_jordan_modular(self, augmented_matrix):
-        # Concatenar A y b en una matriz aumentada
-        # A = A % mod_value
-        # b = b % mod_value
-        # augmented_matrix = np.hstack((A, b.reshape(-1, 1)))  # Matriz aumentada (A|b)
-
-
-        # print(f'Augmented matrix: {augmented_matrix}')
-
-        rows, cols = augmented_matrix.shape  
-        
-        # Eliminación Gaussiana
-        for i in range(rows):
-            # Buscar el primer elemento no nulo en la columna i (pivote)
-            pivot = augmented_matrix[i, i]
-            
-            # Verificar si el pivot es cero o no tiene inverso modular
-            if pivot == 0 or np.gcd(int(pivot), mod_value) != 1:
-                # Buscar otra fila para intercambiar
-                found = False
-                for j in range(i + 1, rows):
-                    if augmented_matrix[j, i] != 0 and np.gcd(int(augmented_matrix[j, i]), mod_value) == 1:
-                        augmented_matrix[[i, j]] = augmented_matrix[[j, i]]
-                        pivot = augmented_matrix[i, i]
-                        found = True
-                        break
-                # Si no se encontró un pivote invertible, el sistema puede ser singular
-                if not found:
-                    raise ValueError("No se encontró un pivote invertible; el sistema puede ser singular.")
-            
-            # Asegurarse de que el pivote sea 1 multiplicándolo por su inverso modular
-            pivot_inv = pow(int(pivot), -1, mod_value)
-            augmented_matrix[i] = (augmented_matrix[i] * pivot_inv) % mod_value
-            
-            # Eliminar las entradas en otras filas
-            for j in range(rows):
-                if j != i:
-                    factor = augmented_matrix[j, i]
-                    augmented_matrix[j] = (augmented_matrix[j] - factor * augmented_matrix[i]) % mod_value
-        
-        # Extraer la solución
-        x = augmented_matrix[:, -1]
-        return x
-    
-    def build_signature(self, T, v, o, mod_value, s_prime) -> np.ndarray:
+    def build_signature(self, T, v, o, s_prime) -> np.ndarray:
         # Construir la matriz de bloques
         # Matriz identidad de tamaño `v x v`
+        T = self.field(T)
+        v = self.field(v)
+        o = self.field(o)
+
         identity_v = np.eye(len(v), dtype=int)
+        identity_v = self.field(identity_v)
 
         # Matriz identidad de tamaño `m x m`
         identity_m = np.eye(len(o), dtype=int)
+        identity_m = self.field(identity_m)
 
         # Concatenar las matrices para formar el bloque
         # `1_v` y `-T`
-        top_block = np.hstack((identity_v, -T % mod_value))
+        top_block = np.hstack((identity_v, -T))
 
         # `0` y `1_m`
         bottom_block = np.hstack((np.zeros((len(o), len(v)), dtype=int), identity_m))
@@ -316,23 +311,13 @@ class Signer:
         block_matrix = np.vstack((top_block, bottom_block))
 
         # Multiplicar por `s_prime` y aplicar el módulo
-        s = (block_matrix @ s_prime) % mod_value
+        s = (block_matrix @ s_prime)
+
+        # print(f's: {s} y su tamaño: {s.shape} y tipo: {type(s)}')
 
         return s
     
     def encode_signature(self):
-
-        irreducible_polynomials = {
-            7: 0b10000011,          # x^7 + x + 1
-            47: 0b100000000000000000000000000000000000000000100001,  # x^47 + x^5 + 1
-            61: 0b10000000000000000000000000000000000000000000000000000000100111,  # x^61 + x^5 + x^2 + x + 1
-            79: 0b10000000000000000000000000000000000000000000000000000000000000000000001000000001   # x^79 + x^9 + 1
-        }
-
-        # Obtener el polinomio irreducible según `r`
-        poly_irreducible = irreducible_polynomials.get(self.r)
-        if poly_irreducible is None:
-            raise ValueError(f"No hay polinomio irreducible definido para F_{{2^{self.r}}}")
 
         # Calcular el número de bytes necesarios para cada elemento en F_{2^r}
         num_bytes = (self.r + 7) // 8  # Redondear hacia arriba para obtener el número de bytes
@@ -342,9 +327,6 @@ class Signer:
         for element in self.s:
             # Reducir el elemento módulo el polinomio irreducible
             element = int(element[0])
-            
-            element = self.reduce_mod_irreducible(element, poly_irreducible)
-
             encoded_bytes = int(element).to_bytes(num_bytes, byteorder='big')
             encoded_elements.extend(encoded_bytes)
         
@@ -359,17 +341,17 @@ class Signer:
 
         return bytes(encoded_elements)
 
-    def reduce_vector(self, vector, irreducible_poly):
-        return np.array([self.reduce_mod_irreducible(element, irreducible_poly) for element in vector])
+    # def reduce_vector(self, vector, irreducible_poly):
+    #     return np.array([self.reduce_mod_irreducible(element, irreducible_poly) for element in vector])
     
-    def reduce_matrix(self, matrix, irreducible_poly):
-        return np.array([self.reduce_vector(row, irreducible_poly) for row in matrix])
+    # def reduce_matrix(self, matrix, irreducible_poly):
+    #     return np.array([self.reduce_vector(row, irreducible_poly) for row in matrix])
 
-    def reduce_mod_irreducible(self, value, irreducible_poly):
-        value = int(value)
-        while value.bit_length() >= irreducible_poly.bit_length():
-            print(f'entré')
-            shift = value.bit_length() - irreducible_poly.bit_length()
-            value ^= irreducible_poly << shift
+    # def reduce_mod_irreducible(self, value, irreducible_poly):
+    #     value = int(value)
+    #     while value.bit_length() >= irreducible_poly.bit_length():
+    #         print(f'entré')
+    #         shift = value.bit_length() - irreducible_poly.bit_length()
+    #         value ^= irreducible_poly << shift
 
-        return value
+    #     return value

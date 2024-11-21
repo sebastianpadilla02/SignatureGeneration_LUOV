@@ -1,6 +1,6 @@
 import os
 from keygen import KG
-from sign2 import Signer
+from sign_modified import Signer
 import galois
 import numpy as np
 
@@ -9,7 +9,7 @@ def lectura_params():
 
     # Valida que se ingrese una opción correcta entre las 6 posibles par definir los parámetros del esquema LUOV
     while op < 1 or op > 6:
-        op = int(input("Ingrese el número del nivel de seguridad que quiere implmentar en su llave\n \t1. LUOV-7-57-197 \n \t2. LUOV-7-83-283\n \t3. LUOV-7-110-374 \n \t4. LUOV-47-42-182 \n \t5. LUOV-61-60-261 \n \t6. LUOV-79-76-341\nIngresa la opción: "))
+        op = int(input("Ingrese el número del nivel de seguridad que quiere implementar en su llave\n \t1. LUOV-7-57-197 \n \t2. LUOV-7-83-283\n \t3. LUOV-7-110-374 \n \t4. LUOV-47-42-182 \n \t5. LUOV-61-60-261 \n \t6. LUOV-79-76-341\nIngresa la opción: "))
         if(op < 1 and op > 6):
             print('Ingrese una opción válida')
 
