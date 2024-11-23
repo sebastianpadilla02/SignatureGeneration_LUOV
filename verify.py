@@ -8,7 +8,7 @@ import galois
 
 class Verifier:
 
-    def __init__(self, params: Tuple[int, int, int, int, galois.GF], public_key: np.ndarray, M: bytes, signature: np.ndarray):
+    def __init__(self, params: Tuple[int, int, int, int, galois.GF], public_key: bytes, M: bytes, signature: np.ndarray):
         self.params = params
         # self.private_seed = private_seed
         self.r = params[0]
@@ -18,15 +18,36 @@ class Verifier:
         self.field = params[4]
         self.n = self.v + self.m
 
-        self.salt = signature[-16:]
+        salt = signature[-16:]
+        s_bytes = signature[:-16]
+        self.s = self.obtain_s(s_bytes)
+        public_seed = public_key[:32]
+        self.Q2 = public_key[32:]
 
-        self.Verify(public_key, M, signature)
+        # self.Verify(salt, public_seed, M, signature)
 
+    def obtain_s(self, s_bytes: bytes):
+        total_bits = self.n * self.r
+        # Convertir los bytes de `s` en una cadena binaria
+        s_bits = bin(int.from_bytes(s_bytes, byteorder='big'))[2:]  # Eliminar '0b'
+        
+        s_bits = s_bits[:total_bits]
+        # s = np.zeros((self.m, 1), dtype=int)
 
-    def Verify(self, public_key, M, s):
-        h = calculate_h(M, self.salt)
+        # for i in range(self.m):
+        #     s[i, 0] = int.from_bytes(s_bytes[i * 2: (i + 1) * 2], 'big')
+        print(f's_bits: {s_bits} y su longitud: {len(s_bits)}')
+
+        # Dividir los bits de `s` en elementos individuales
+        s = [int(s_bits[i:i + self.r], 2) for i in range(0, total_bits, self.r)]
+        return s_bits
+
+    def Verify(self, salt, public_seed, M, s):
+        h = self.calculate_h(M, salt)
         # print(f'h: {h}')
-        e = EvaluatePublicMap(public_key, s)
+
+
+        e = self.EvaluatePublicMap(salt, public_seed, s)
 
 
     def calculate_h(self, M: bytes, salt: bytes) -> np.ndarray:
@@ -66,6 +87,6 @@ class Verifier:
         return h
 
     def EvaluatePublicMap(public_key: np.ndarray, s: np.ndarray) -> np.ndarray:
-        pass
+        len_signature
 
     

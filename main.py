@@ -3,6 +3,7 @@ from keygen import KG
 from sign import Signer
 import galois
 import numpy as np
+from verify import Verifier
 
 def lectura_params():
     op = 0
@@ -117,13 +118,19 @@ if __name__ == "__main__":
 
     signature = gen_firmas.encode_signature()
 
-    print(f'Firma codificada: {signature}')
+    # print(f'Firma codificada: {signature}')
 
     firma = os.path.join('signatures', firma)
 
     #Quiero imprimir el tamaño de la firma en bytes
-    print(f'Tamaño de la firma: {len(signature)} bytes')
+    # print(f'Tamaño de la firma: {len(signature)} bytes')
 
     with open(firma, "wb") as file:
         file.write(signature)
     
+
+    # Verificación de la firma
+    verify = Verifier(params, public_key, M, signature)
+
+    #quiero comparar si la firma generada es igual a la firma verificada
+    print(gen_firmas.encode_signature == verify.s)

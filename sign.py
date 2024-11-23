@@ -323,13 +323,20 @@ class Signer:
             num = f"{element:0{self.r}b}"
             encoded_sign += num
         
+        self.encode_signature = encoded_sign
+
+        print(f'encoded_sign: {encoded_sign} y su longitud: {len(encoded_sign)}')
         # Calcular el número total de bits y verificar si es múltiplo de 8
         total_bits = self.n * self.r
         if total_bits % 8 != 0:
             for i in range(8 - (total_bits % 8)):
                 encoded_sign += "0"
 
+        # print(f'Luego de añadidos los ceros:{encoded_sign} y su longitud: {len(encoded_sign)}')
+
         num_bytes = (len(encoded_sign) + 7) // 8
+
+        
 
         # Concatenar el `salt` al final
         encoded_sign = int(encoded_sign, 2).to_bytes(num_bytes, byteorder='big')
