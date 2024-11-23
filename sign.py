@@ -118,7 +118,6 @@ class Signer:
         self.salt = salt
         self.s = s
 
-
     def derive_public_seed_and_T(self, private_seed) -> Tuple[bytes, np.ndarray]:
         # Llama al método SqueezeT para derivar `public_seed` y `T` a partir de la private_seed
         public_seed, T = self.keygen.SqueezeT(self.keygen.InitializeAndAbsorb(private_seed))
@@ -245,8 +244,6 @@ class Signer:
         h = self.field(h)
         C = self.field(C)
 
-
-
         # Calcular RHS = h - C - L(v||0)^T
         RHS = h - C - Lv
 
@@ -325,18 +322,13 @@ class Signer:
         
         self.encode_signature = encoded_sign
 
-        print(f'encoded_sign: {encoded_sign} y su longitud: {len(encoded_sign)}')
         # Calcular el número total de bits y verificar si es múltiplo de 8
         total_bits = self.n * self.r
         if total_bits % 8 != 0:
             for i in range(8 - (total_bits % 8)):
                 encoded_sign += "0"
 
-        # print(f'Luego de añadidos los ceros:{encoded_sign} y su longitud: {len(encoded_sign)}')
-
         num_bytes = (len(encoded_sign) + 7) // 8
-
-        
 
         # Concatenar el `salt` al final
         encoded_sign = int(encoded_sign, 2).to_bytes(num_bytes, byteorder='big')

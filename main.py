@@ -132,5 +132,7 @@ if __name__ == "__main__":
     # Verificación de la firma
     verify = Verifier(params, public_key, M, signature)
 
-    #quiero comparar si la firma generada es igual a la firma verificada
-    print(gen_firmas.encode_signature == verify.s)
+    if verify.result:
+        print('La firma es válida')
+    else:    
+        print('La firma no es válida')
