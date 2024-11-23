@@ -14,6 +14,7 @@ class Signer:
         self.v = params[2]
         self.SHAKE = params[3]
         self.field = params[4]
+        self.n = self.v + self.m
         
         # Reutilizamos la clase KG para derivar la semilla pública y T
         self.keygen = KG(params, private_seed)
@@ -315,39 +316,23 @@ class Signer:
     
     def encode_signature(self):
 
-        # Calcular el número de bytes necesarios para cada elemento en F_{2^r}
-        num_bytes = (self.r + 7) // 8  # Redondear hacia arriba para obtener el número de bytes
-        
         # Codificar cada elemento en `s` en `num_bytes` bytes
-        encoded_elements = bytearray()
+        encoded_sign = ""
         for element in self.s:
-            # Reducir el elemento módulo el polinomio irreducible
             element = int(element[0])
-            encoded_bytes = int(element).to_bytes(num_bytes, byteorder='big')
-            encoded_elements.extend(encoded_bytes)
+            num = f"{element:0{self.r}b}"
+            encoded_sign += num
         
         # Calcular el número total de bits y verificar si es múltiplo de 8
-        total_bits = len(self.s) * self.r
+        total_bits = self.n * self.r
         if total_bits % 8 != 0:
-            padding_bits = 8 - (total_bits % 8)
-            encoded_elements.extend(b'\x00' * (padding_bits // 8))  # Añadir los bytes de padding
-        
-        # Añadir el `salt` al final
-        encoded_elements.extend(self.salt)
+            for i in range(8 - (total_bits % 8)):
+                encoded_sign += "0"
 
-        return bytes(encoded_elements)
+        num_bytes = (len(encoded_sign) + 7) // 8
 
-    # def reduce_vector(self, vector, irreducible_poly):
-    #     return np.array([self.reduce_mod_irreducible(element, irreducible_poly) for element in vector])
-    
-    # def reduce_matrix(self, matrix, irreducible_poly):
-    #     return np.array([self.reduce_vector(row, irreducible_poly) for row in matrix])
+        # Concatenar el `salt` al final
+        encoded_sign = int(encoded_sign, 2).to_bytes(num_bytes, byteorder='big')
+        encoded_sign = encoded_sign + self.salt  # Convierte encoded_sign a bytes y concatena
 
-    # def reduce_mod_irreducible(self, value, irreducible_poly):
-    #     value = int(value)
-    #     while value.bit_length() >= irreducible_poly.bit_length():
-    #         print(f'entré')
-    #         shift = value.bit_length() - irreducible_poly.bit_length()
-    #         value ^= irreducible_poly << shift
-
-    #     return value
+        return bytes(encoded_sign)
