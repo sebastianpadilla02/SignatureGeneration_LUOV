@@ -144,6 +144,8 @@ class KG:
                         bits_added += 1
                     
                     pos = l + 1
+                else:
+                    pos = 16*i
 
                 # Se calcula cuantos bits faltan del byte restante y se toman los bits menos significativos
                 bits_restantes = self.m % 16 - bits_added
@@ -186,6 +188,8 @@ class KG:
                             bits_added += 1
                         
                         pos = l + 1
+                    else:
+                        pos = 16*i
 
                     # Se calculan los bits restantes y se añaden los menos significativos a la matriz
                     bits_restantes = self.m % 16 - bits_added
@@ -231,6 +235,8 @@ class KG:
                             bits_added += 1
                         
                         pos = l + 1
+                    else:
+                        pos = 16*i
 
                     #Se calculan los bits restantes y se toman los menos significativos de este byte
                     bits_restantes = self.m % 16 - bits_added

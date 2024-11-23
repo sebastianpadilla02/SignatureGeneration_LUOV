@@ -1,6 +1,6 @@
 import os
 from keygen import KG
-from sign_modified import Signer
+from sign import Signer
 import galois
 import numpy as np
 
@@ -95,6 +95,9 @@ if __name__ == "__main__":
     privada = os.path.join('keys', privada)
     print(private_key)
 
+    print(f'Tamaño de la llave privada: {len(private_key)} bytes')
+    print(f'Tamaño de la llave pública: {len(public_key)} bytes')
+
     with open(privada, 'wb') as file:
         file.write(private_key)
 
@@ -117,6 +120,9 @@ if __name__ == "__main__":
     print(f'Firma codificada: {signature}')
 
     firma = os.path.join('signatures', firma)
+
+    #Quiero imprimir el tamaño de la firma en bytes
+    print(f'Tamaño de la firma: {len(signature)} bytes')
 
     with open(firma, "wb") as file:
         file.write(signature)
