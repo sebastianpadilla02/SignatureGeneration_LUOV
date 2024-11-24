@@ -2,7 +2,6 @@ import os
 from keygen import KG
 from sign import Signer
 import galois
-import numpy as np
 from verify import Verifier
 
 def lectura_params():
