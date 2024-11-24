@@ -1,8 +1,6 @@
 import hashlib
 import numpy as np
 from typing import Tuple
-#import cupy as cp
-
 
 class KG:
 
@@ -308,6 +306,7 @@ class KG:
         
         return Q2
     
+    #Función para convertir un string de bits a bytes
     def bits_to_bytes(self, bit_string: str) -> bytes:
         # Convertir el string de bits a un entero
         byte_value = int(bit_string, 2)

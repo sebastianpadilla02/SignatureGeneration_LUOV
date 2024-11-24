@@ -1,6 +1,3 @@
-from keygen import KG
-from sign import Signer
-import os
 import numpy as np
 from typing import Tuple
 import hashlib
@@ -8,6 +5,7 @@ import galois
 
 class Verifier:
 
+    # Constructor de la clase Verifier, donde se almacenan los parametros y se calculan las matrices necesarias para la verificación
     def __init__(self, params: Tuple[int, int, int, int, galois.GF], public_key: bytes, M: bytes, signature: np.ndarray):
         self.params = params
         # self.private_seed = private_seed
@@ -18,41 +16,45 @@ class Verifier:
         self.field = params[4]
         self.n = self.v + self.m
 
+        #Separar la firma en s y salt
         s, salt = self.obtain_s(signature)
 
+        #Obtener la semilla pública y la matriz Q2 de la llave pública
         public_seed, Q2 = self.obtain_Q2(public_key)
 
         self.Verify(s, salt, public_seed, Q2, M)
 
-    def obtain_s(self, signature: bytes):
+    # Método que separa la firma en s y salt
+    def obtain_s(self, signature: bytes) -> Tuple[np.ndarray, bytes]:
+        # Separar los últimos 16 bytes de la firma como salt
         salt = signature[-16:]
-        s_bytes = signature[:-16]
+        s_bytes = signature[:-16]  # Los primeros bytes son `s`
 
         total_bits = self.n * self.r
 
+        # Calcular cuántos ceros se necesitan para completar el último byte
         cantidad_ceros = 0
         if total_bits % 8 != 0:
             cantidad_ceros = 8 - (total_bits % 8)
 
         # Convertir los bytes de `s` en una cadena binaria
         s_bits = bin(int.from_bytes(s_bytes, byteorder='big'))[2:].zfill(cantidad_ceros + total_bits)  # Eliminar '0b'
-        
-        # print(f's_bits: {s_bits} y su longitud: {len(s_bits)}')
 
+        #Elimina los ultimos ceros que se añadieron para completar el byte
         s_bits = s_bits[:total_bits]
-
-        # print(f's_bits quitando los ceros: {s_bits} y su longitud: {len(s_bits)}')
 
         # Dividir los bits de `s` en elementos individuales
         s = [int(s_bits[i:i + self.r], 2) for i in range(0, total_bits, self.r)]
 
-        s = self.field(s)
+        s = self.field(s) # Convertir a campo finito
 
-        s = s.reshape(-1, 1)
+        s = s.reshape(-1, 1) # Convertir a un vector columna
 
         return s, salt
 
-    def obtain_Q2(self, public_key: bytes):
+    # Método que separa la llave pública en la semilla pública y la matriz Q2
+    def obtain_Q2(self, public_key: bytes) -> Tuple[bytes, np.ndarray]:
+        # Separar la semilla pública y Q2 de la llave pública
         public_seed = public_key[:32]
         Q2_bits = public_key[32:]
 
@@ -69,17 +71,21 @@ class Verifier:
                 Q2[i, j] = int(Q2_bit_string[bit_index])
         
         return public_seed, Q2
-    
-    def Verify(self, s, salt, public_seed, Q2, M):
-        h = self.calculate_h(M, salt)
-        # print(f'h: {h}')
 
+    # Método que verifica la firma   
+    def Verify(self, s: np.ndarray, salt: bytes, public_seed: bytes, Q2: np.ndarray, M: bytes) -> None:
+        # Calcular h
+        h = self.calculate_h(M, salt)
+
+        # Calcular e
         e = self.EvaluatePublicMap(public_seed, Q2, s)
 
+        # Comparar e y h
         self.result = self.Compare(e, h)
 
+    # Método que calcula h
     def calculate_h(self, M: bytes, salt: bytes) -> np.ndarray:
-        # Línea 4: Concatenar el mensaje, 0x00 y el salt
+        # Concatenar el mensaje, 0x00 y el salt
         concatenated_message = M + b'\x00' + salt
 
         # Llama a la función H de la clase KG para calcular h
@@ -94,7 +100,6 @@ class Verifier:
 
         # Generar `m * r` bits de salida
         num_bits = self.m * self.r
-        # print(f'num_bits: {num_bits}')
         num_bytes = (num_bits + 7) // 8  # Convertir a número de bytes redondeando hacia arriba
 
         hash_output = shake.digest(num_bytes)
@@ -102,28 +107,31 @@ class Verifier:
         # Convertir el hash en un vector sobre F_{2^r} y almacenar en un array de numpy
         bit_string = ''.join(f'{byte:08b}' for byte in hash_output)  # Convertir los bytes a una cadena de bits
 
-        # print(f'bit_string: {bit_string} y su longitud: {len(bit_string)}')
-
         h = np.zeros((self.m, 1), dtype=int)
 
         for i in range(self.m):
             # Tomar bloques de `r` bits y convertirlos en enteros
             r_bits = bit_string[i * self.r: (i + 1) * self.r]
-            # print(f'r_bits: {r_bits} y su longitud: {len(r_bits)}')
             h[i,0] = int(r_bits, 2)
 
         return h
 
-    def EvaluatePublicMap(self, public_seed, Q2, s) -> np.ndarray:
+    # Método que evalúa el mapa público
+    def EvaluatePublicMap(self, public_seed: bytes, Q2: np.ndarray, s:np.ndarray) -> np.ndarray:
+        # Calcular Q1, C y L
         C, L, Q1 = self.SqueezePublicMap(public_seed)
 
+        # Concatenar Q1 y Q2
         Q = np.hstack((Q1, Q2))
 
+        # Convertir a campo finito
         C = self.field(C)
         L = self.field(L)
 
+        # Calcular e = C + Ls
         e = C + L @ s
 
+        # LLenar la matriz e con los valores de Q y s
         column = 0
         for i in range(self.n):
             print(f'Iteración {i}')
@@ -299,7 +307,8 @@ class Verifier:
         # Generar el número de bytes necesario
         return shake.digest(num_bytes)    
     
-    def Compare(self, e, h):
+    # Comparación entre los vectores e y h lo que verifica la firma
+    def Compare(self, e: np.ndarray, h: np.ndarray) -> bool:
         if np.array_equal(e, h):
             return True
         else:
