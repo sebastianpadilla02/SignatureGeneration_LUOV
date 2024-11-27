@@ -53,7 +53,7 @@ class KG:
         # Calcular el número de bytes necesarios para generar una matriz de v x m bits
         num_bytes = ((self.m + 7) // 8) * self.v  # Redondear al mayor(función techo) para asegurarse de tener suficientes bits
         
-        # Exprimir los bytes necesarios(32 para la semilla privada y num_bytes para la matriz T)
+        # Exprimir los bytes necesarios(32 para la semilla pública y num_bytes para la matriz T)
         random_bytes = private_sponge.digest(32 + num_bytes)
 
         # Separa los primeros 32 bytes para la semilla pública

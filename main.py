@@ -21,7 +21,7 @@ def lectura_params():
     }
 
     #Asignación de parámetros
-    #params = [r, m, v, SHAKE]
+    #params = [r, m, v, SHAKE, irreducible_polynomial]
     if op == 1:
         params = [7, 57, 197, 128, irreducible_polynomials[7]]
     elif op == 2:
